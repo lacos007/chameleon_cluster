@@ -93,13 +93,19 @@ def connecting_edges(partitions, graph):
             if a in graph:
                 if b in graph[a]:
                     cut_set.append((a, b))
+    return cut_set
+
+def cuda_connecting_edges(partitions, graph):
+    block = (4,1,1)
+    grid = (1,1)
     
     mod = source_module("""
     __global__ void connecting_edges(float* dest, float* first_cluster, float* second_cluster)
     {
-    int return_set = 0;
+    int return_set_index = 0;
     
-    int first_node_set = second_node_set = 0;
+    const int first_node_set = 0;
+    const int second_node_set = 0;
     
     int first_cluster_length;
     int second_cluster_length;
@@ -109,13 +115,14 @@ def connecting_edges(partitions, graph):
             for(; second_node_set < second_cluster_length; second_node_set++)
                 if(first_cluster[first_node_set] == second_cluster[second_node_set])
                 {
-                    return_cluster[return_set] = first_cluster[first_node_set];
-                    return_set++;
+                    return_cluster[return_set_index] = first_cluster[first_node_set];
+                    return_set_index++;
                 }    
         }
-    }  """)   
+    }  
+    """)   
     
-    connecting_edges = kernel.get_function('connecting_edges')
+    connecting_edges = mod.get_function('connecting_edges')
     
     return_set = []
     gpu_return_set = gpu_array.to_gpu(return_set)
@@ -125,9 +132,9 @@ def connecting_edges(partitions, graph):
     cluster_j = partitions[1].node
     gpu_cluster_j = gpu_array.to_gpu(cluster_j)
 
-    connecting_edges( (return_set, gpu_cluster_i, gpu_cluster_j), block=(4,1,1), grid=(1,1) )   
+    connecting_edges( drv.out(return_set), drv.in(gpu_cluster_i), drv.in(gpu_cluster_j), block, grid)   
     
-    return cut_set
+    return return_set
 
 
 def min_cut_bisector(graph):
