@@ -2,6 +2,10 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 from visualization import *
+import pycuda.autoinit
+from pycuda.compiler import SourceModule
+import pycuda.driver as drv
+import pycuda.gpuarray as gpuarray
 
 import metis
 
@@ -89,13 +93,11 @@ def connecting_edges(partitions, graph):
             if a in graph:
                 if b in graph[a]:
                     cut_set.append((a, b))
-    """
-    //needs size of return set 
-    int[] return_cluster;
-    int return_set = 0;
     
-    int[] first_cluster;
-    int[] second_cluster;
+    mod = source_module("""
+    __global__ void connecting_edges(float* dest, float* first_cluster, float* second_cluster)
+    {
+    int return_set = 0;
     
     int first_node_set = second_node_set = 0;
     
@@ -111,7 +113,20 @@ def connecting_edges(partitions, graph):
                     return_set++;
                 }    
         }
-    """                    
+    }  """)   
+    
+    connecting_edges = kernel.get_function('connecting_edges')
+    
+    return_set = []
+    gpu_return_set = gpu_array.to_gpu(return_set)
+    
+    cluster_i = partitions[0].node
+    gpu_cluster_i = gpu_array.to_gpu(cluster_i)
+    cluster_j = partitions[1].node
+    gpu_cluster_j = gpu_array.to_gpu(cluster_j)
+
+    connecting_edges( (return_set, gpu_cluster_i, gpu_cluster_j), block=(4,1,1), grid=(1,1) )   
+    
     return cut_set
 
 
