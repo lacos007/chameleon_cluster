@@ -89,6 +89,29 @@ def connecting_edges(partitions, graph):
             if a in graph:
                 if b in graph[a]:
                     cut_set.append((a, b))
+    """
+    //needs size of return set 
+    int[] return_cluster;
+    int return_set = 0;
+    
+    int[] first_cluster;
+    int[] second_cluster;
+    
+    int first_node_set = second_node_set = 0;
+    
+    int first_cluster_length;
+    int second_cluster_length;
+    
+    for(; first_node_set < first_cluster_length; first_node_set++)
+        {
+            for(; second_node_set < second_cluster_length; second_node_set++)
+                if(first_cluster[first_node_set] == second_cluster[second_node_set])
+                {
+                    return_cluster[return_set] = first_cluster[first_node_set];
+                    return_set++;
+                }    
+        }
+    """                    
     return cut_set
 
 
