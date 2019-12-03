@@ -96,29 +96,24 @@ def connecting_edges(partitions, graph):
     return cut_set
 
 def cuda_connecting_edges(partitions, graph):
-    block = (4,1,1)
+    
+    block = (len(partitions[0]),1,1)
     grid = (1,1)
     
     mod = source_module("""
-    __global__ void connecting_edges(float* dest, float* first_cluster, float* second_cluster)
+    __global__ void connecting_edges(float* dest, float* first_cluster, float* second_cluster, int second_cluster_length)
     {
-    int return_set_index = 0;
+    //const int return_set_index = ;
     
-    const int first_node_set = 0;
-    const int second_node_set = 0;
+    const int first_node_set = threadId.x;
+    int second_node_set = 0;
     
-    int first_cluster_length;
-    int second_cluster_length;
-    
-    for(; first_node_set < first_cluster_length; first_node_set++)
-        {
-            for(; second_node_set < second_cluster_length; second_node_set++)
-                if(first_cluster[first_node_set] == second_cluster[second_node_set])
-                {
-                    return_cluster[return_set_index] = first_cluster[first_node_set];
-                    return_set_index++;
-                }    
-        }
+    for(; second_node_set < second_cluster_length; second_node_set++)
+           if(first_cluster[first_node_set] == second_cluster[second_node_set])
+           {
+               dest[return_set_index] = first_cluster[first_node_set];
+               return_set_index++;
+           }    
     }  
     """)   
     
@@ -131,8 +126,8 @@ def cuda_connecting_edges(partitions, graph):
     gpu_cluster_i = gpu_array.to_gpu(cluster_i)
     cluster_j = partitions[1].node
     gpu_cluster_j = gpu_array.to_gpu(cluster_j)
-
-    connecting_edges( drv.out(return_set), drv.in(gpu_cluster_i), drv.in(gpu_cluster_j), block, grid)   
+    second_cluster_length = len(cluster_j)
+    connecting_edges( drv.out(return_set), drv.in(gpu_cluster_i), drv.in(gpu_cluster_j), driv.in(second_cluster_length), block, grid)   
     
     return return_set
 
