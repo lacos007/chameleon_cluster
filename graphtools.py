@@ -88,6 +88,7 @@ def get_cluster(graph, clusters):
 
 def connecting_edges(partitions, graph):
     cut_set = []
+    print (partitions[0].node)
     for a in partitions[0]:
         for b in partitions[1]:
             if a in graph:
@@ -96,7 +97,6 @@ def connecting_edges(partitions, graph):
     return cut_set
 
 def cuda_connecting_edges(partitions, graph):
-    
     block = (len(partitions[0]),1,1)
     grid = (1,1)
     
