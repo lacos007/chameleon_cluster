@@ -2,11 +2,12 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 from visualization import *
+"""
 import pycuda.autoinit
 from pycuda.compiler import SourceModule
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
-
+"""
 import metis
 
 
@@ -96,6 +97,7 @@ def connecting_edges(partitions, graph):
                     cut_set.append((a, b))
     return cut_set
 
+"""
 def cuda_connecting_edges(partitions, graph):
     block = (len(partitions[0]),1,1)
     grid = (1,1)
@@ -103,34 +105,41 @@ def cuda_connecting_edges(partitions, graph):
     mod = source_module("""
     __global__ void connecting_edges(float* dest, float* first_cluster, float* second_cluster, int second_cluster_length)
     {
-    //const int return_set_index = ;
+    int set_index = threadId.x;
+    int return_index = threadId.x;
     
-    const int first_node_set = threadId.x;
-    int second_node_set = 0;
-    
-    for(; second_node_set < second_cluster_length; second_node_set++)
-           if(first_cluster[first_node_set] == second_cluster[second_node_set])
+    for(int second_node_set = 0; second_node_set < second_cluster_length; second_node_set++)
+        {
+           if(first_cluster[set_index] == second_cluster[second_node_set])
            {
-               dest[return_set_index] = first_cluster[first_node_set];
-               return_set_index++;
+               dest[return_index] = [ first_cluster[first_node_set], second_cluster[second_node_set] ];
            }    
+           else 
+           {
+               dest[return_index][] = -1; 
+           }
+        }
     }  
     """)   
     
     connecting_edges = mod.get_function('connecting_edges')
     
-    return_set = []
-    gpu_return_set = gpu_array.to_gpu(return_set)
+    return_set = [] * len(partitions[0])   
+    gpu_return_set = cuda.mem_alloc(return_set.float32)
     
     cluster_i = partitions[0].node
     gpu_cluster_i = gpu_array.to_gpu(cluster_i)
     cluster_j = partitions[1].node
     gpu_cluster_j = gpu_array.to_gpu(cluster_j)
     second_cluster_length = len(cluster_j)
-    connecting_edges( drv.out(return_set), drv.in(gpu_cluster_i), drv.in(gpu_cluster_j), driv.in(second_cluster_length), block, grid)   
+    
+    connecting_edges( drv.out(gpu_return_set), drv.in(gpu_cluster_i), drv.in(gpu_cluster_j), driv.in(second_cluster_length), 
+                      block, grid)
+    
+    return_set = [return_set for return_set in a if return_set != -1]
     
     return return_set
-
+"""
 
 def min_cut_bisector(graph):
     graph = graph.copy()
