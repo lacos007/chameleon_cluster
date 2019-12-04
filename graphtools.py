@@ -91,7 +91,7 @@ def connecting_edges(partitions, graph):
     cut_set = []
     print (partitions[0])
     print (partitions[1])
-    print (nx.adjacency_matrix(graph)
+    print (nx.adjacency_matrix(graph))
     for a in partitions[0]:
         for b in partitions[1]:
             if a in graph:
