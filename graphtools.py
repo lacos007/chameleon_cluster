@@ -102,7 +102,7 @@ def cuda_connecting_edges(partitions, graph):
     block = (len(partitions[0]),1,1)
     grid = (1,1)
     
-    mod = source_module("""
+    mod = source_module(
     __global__ void connecting_edges(float* dest, float* first_cluster, float* second_cluster, int second_cluster_length)
     {
     int set_index = threadId.x;
@@ -120,7 +120,7 @@ def cuda_connecting_edges(partitions, graph):
            }
         }
     }  
-    """)   
+    )   
     
     connecting_edges = mod.get_function('connecting_edges')
     
