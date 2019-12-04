@@ -89,8 +89,8 @@ def get_cluster(graph, clusters):
 
 def connecting_edges(partitions, graph):
     cut_set = []
-    #print (partitions[0])
-    #print (partitions[1])
+    print (partitions[0])
+    print (partitions[1])
     for a in partitions[0]:
         for b in partitions[1]:
             if a in graph:
