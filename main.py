@@ -8,8 +8,8 @@ if __name__ == "__main__":
     df = pd.read_csv('./datasets/two_squares.csv', sep=' ',
                      header=None)
 
-    # returns a pands.dataframe of cluster
-    res = cluster(df, 7, knn=20, m=40, alpha=2.0, plot=False)
+    # returns a pandas.dataframe of cluster
+    res = cluster(df, 7, knn=6, m=40, alpha=2.0, plot=False)
 
     # draw a 2-D scatter plot with cluster
     plot2d_data(res)
