@@ -31,7 +31,7 @@ def knn_graph(df, k, verbose=False):
         for c in closests:
             g.add_edge(i, c, weight=1.0 / distances[c], similarity=int(
                 1.0 / distances[c] * 1e4))
-        g.node[i]['pos'] = p
+        g.nodes[i]['pos'] = p
     g.graph['edge_weight_attr'] = 'similarity'
     return g
 
@@ -41,7 +41,7 @@ def part_graph(graph, k, df=None):
         graph, 2, objtype='cut', ufactor=250)
     # print(edgecuts)
     for i, p in enumerate(graph.nodes()):
-        graph.node[p]['cluster'] = parts[i]
+        graph.nodes[p]['cluster'] = parts[i]
     if df is not None:
         df['cluster'] = nx.get_node_attributes(graph, 'cluster').values()
     return graph
@@ -52,7 +52,7 @@ def pre_part_graph(graph, k, df=None, verbose=False):
         print("Begin clustering...")
     clusters = 0
     for i, p in enumerate(graph.nodes()):
-        graph.node[p]['cluster'] = 0
+        graph.nodes[p]['cluster'] = 0
     cnts = {}
     cnts[0] = len(graph.nodes())
 
@@ -63,14 +63,14 @@ def pre_part_graph(graph, k, df=None, verbose=False):
             if val > maxcnt:
                 maxcnt = val
                 maxc = key
-        s_nodes = [n for n in graph.node if graph.node[n]['cluster'] == maxc]
+        s_nodes = [n for n in graph.nodes if graph.nodes[n]['cluster'] == maxc]
         s_graph = graph.subgraph(s_nodes)
         edgecuts, parts = metis.part_graph(
             s_graph, 2, objtype='cut', ufactor=250)
         new_part_cnt = 0
         for i, p in enumerate(s_graph.nodes()):
             if parts[i] == 1:
-                graph.node[p]['cluster'] = clusters + 1
+                graph.nodes[p]['cluster'] = clusters + 1
                 new_part_cnt = new_part_cnt + 1
         cnts[maxc] = cnts[maxc] - new_part_cnt
         cnts[clusters + 1] = new_part_cnt
@@ -83,7 +83,7 @@ def pre_part_graph(graph, k, df=None, verbose=False):
 
 
 def get_cluster(graph, clusters):
-    nodes = [n for n in graph.node if graph.node[n]['cluster'] in clusters]
+    nodes = [n for n in graph.nodes if graph.nodes[n]['cluster'] in clusters]
     return nodes
 
 
@@ -124,10 +124,10 @@ def cuda_connecting_edges(partitions, graph):
     return_set = [ [] ] * ( len(partitions[0]) * len(partitions[1]) )   
     gpu_return_set = cuda.mem_alloc(return_set.float32)
     
-    cluster_i = partitions[0].node
+    cluster_i = partitions[0].nodes
     gpu_cluster_i = gpu_array.to_gpu(cluster_i)
     
-    cluster_j = partitions[1].node
+    cluster_j = partitions[1].nodes
     gpu_cluster_j = gpu_array.to_gpu(cluster_j)
     
     second_cluster_length = len(cluster_j)
