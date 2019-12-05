@@ -2,12 +2,11 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 from visualization import *
-"""
 import pycuda.autoinit
 from pycuda.compiler import SourceModule
 import pycuda.driver as drv
 import pycuda.gpuarray as gpuarray
-"""
+
 import metis
 
 
@@ -91,65 +90,78 @@ def connecting_edges(partitions, graph):
     cut_set = []
     #print (partitions[0])
     #print (partitions[1])
-    print('next iteration')
-    adj_graph = nx.to_pandas_adjacency(graph)
-    print(adj_graph)
+    #print('next iteration')
+    #adj_graph = nx.to_pandas_adjacency(graph)
+    #print(adj_graph)
     for a in partitions[0]:
         for b in partitions[1]:
             if a in graph:
                 if b in graph[a]:
                     cut_set.append((a, b))
-    print (cut_set)
+    #print (cut_set)
     return cut_set
 
 
-"""
 def cuda_connecting_edges(partitions, graph):
     block = (len(partitions[0]),1,1)
     grid = (1,1)
     
-    mod = source_module(
+    mod = source_module("""
     __global__ void connecting_edges(float* dest, float* first_cluster, float* second_cluster, 
-                                        bool* adj_matrix, int second_cluster_length)
+                                        bool* adj_matrix, int second_cluster_length, int matrix_block_size)
     {
         int set_index = threadId.x;
         int return_index = threadId.x;
         
         for(int second_index = 0; second_index < second_cluster_length; second_index++ )
             {
-                if( )
-                    dest[return_index] = { {first_cluster[set_index]}, {second_cluster[second_index]} }
+                if(adj_matrix[ (set_index * matrix_block_size) + second_index ] > 0 )
+                    dest[return_index] = { {first_cluster[set_index]}, {second_cluster[second_index]} };
                 else 
                     dest[return_index] = { {-1}, {-1} };
             } 
     }  
-    )   
+    """)   
     
     connecting_edges = mod.get_function('connecting_edges')
     
-    return_set = [ [] ] * ( len(partitions[0]) * len(partitions[1]) )   
-    gpu_return_set = cuda.mem_alloc(return_set.float32)
+    return_set = [0] * ( len(partitions[0]) * len(partitions[1]) )   
+    return_set = return_set.as_type(numpy.float32))
+    gpu_return_set = cuda.mem_alloc(return_set.nbytes)
+    cuda.memcpy_htod(gpu_return_set, return_set)
     
     cluster_i = partitions[0].nodes
-    gpu_cluster_i = gpu_array.to_gpu(cluster_i)
+    cluster_i = cluster_i.as_type(numpy.float32))
+    gpu_cluster_i = cuda.mem_alloc(return_set.nbytes)
+    cuda.memcpy_htod(gpu_cluster_i, cluster_i)
     
     cluster_j = partitions[1].nodes
-    gpu_cluster_j = gpu_array.to_gpu(cluster_j)
+    cluster_j = cluster_j.as_type(numpy.float32))
+    gpu_cluster_j = cuda.mem_alloc(return_set.nbytes)
+    cuda.memcpy_htod(gpu_cluster_j, cluster_j)
     
     second_cluster_length = len(cluster_j)
     
-    graph = nx.adjacency_matrix(graph)
-    gpu_adj_matrix = gpu_array.to_gpu(graph)
+    graph = nx.to_pandas_adjacency(graph)
+    
+    list_graph = []
+    for i in graph
+        for j in graph  
+            list_graph.adj_graph[i][j]
+        
+    gpu_adj_matrix = gpu_array.to_gpu(list_graph)
+    
+    matrix_block_size = len(graph)
     
     connecting_edges( drv.out(gpu_return_set), drv.in(gpu_cluster_i), drv.in(gpu_cluster_j), drv.in(gpu_adj_matrix), 
-                        driv.in(second_cluster_length), block, grid)
+                        drv.in(second_cluster_length), driv.in(matrix_block_size) block, grid )
     
-    return_set = gpu_return_set.gpu_get()
+    pair_set = numpy.empty_like(return_set)
+    cuda.memcpy_dtoh(pair_set, gpu_return_set)
     
-    return_set = [return_set for return_set in a if return_set != -1]
+    pair_set = [pair_set for pair_set in a if pair_set != (-1,-1)]
     
-    return return_set
-"""
+    return pair_set
 
 
 def min_cut_bisector(graph):
