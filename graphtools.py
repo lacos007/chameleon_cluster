@@ -91,7 +91,9 @@ def connecting_edges(partitions, graph):
     cut_set = []
     print (partitions[0])
     print (partitions[1])
-    print (nx.adjacency_matrix(graph))
+    adj_graph = nx.to_scipy_sparse_matrix(graph)
+    print (adj_graph.todense())
+
     for a in partitions[0]:
         for b in partitions[1]:
             if a in graph:
