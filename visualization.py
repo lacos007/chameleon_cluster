@@ -19,4 +19,4 @@ def plot2d_data(df):
     if (len(df.columns) > 3):
         print("Plot Warning: more than 2-Dimensions!")
     df.plot(kind='scatter', c=df['cluster'], cmap='gist_rainbow', x=0, y=1)
-    plt.show(block=False)
+    plt.savefig('cluster_results.png')

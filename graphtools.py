@@ -89,18 +89,18 @@ def get_cluster(graph, clusters):
 
 def connecting_edges(partitions, graph):
     cut_set = []
-    print (partitions[0])
-    print (partitions[1])
+    #print (partitions[0])
+    #print (partitions[1])
     adj_graph = nx.to_scipy_sparse_matrix(graph)
     print (adj_graph.todense())
-
     for a in partitions[0]:
         for b in partitions[1]:
             if a in graph:
                 if b in graph[a]:
                     cut_set.append((a, b))
-    print (cut_set)
+    #print (cut_set)
     return cut_set
+
 
 """
 def cuda_connecting_edges(partitions, graph):
@@ -113,9 +113,14 @@ def cuda_connecting_edges(partitions, graph):
     {
         int set_index = threadId.x;
         int return_index = threadId.x;
-    
         
-    
+        for(int second_index = 0; second_index < second_cluster_length; second_index++ )
+            {
+                if ( )
+                    dest[return_index] = { {first_cluster[set_index]}, {second_cluster[second_index]} }
+                else 
+                    dest[return_index] = { {-1}, {-1} };
+            } 
     }  
     )   
     
@@ -144,6 +149,7 @@ def cuda_connecting_edges(partitions, graph):
     
     return return_set
 """
+
 
 def min_cut_bisector(graph):
     graph = graph.copy()
