@@ -23,7 +23,7 @@ def internal_closeness(graph, cluster):
 
 
 def relative_closeness(graph, cluster_i, cluster_j):
-    edges = connecting_edges((cluster_i, cluster_j), graph)
+    edges = cuda_connecting_edges((cluster_i, cluster_j), graph)
     if not edges:
         return 0.0
     else:
