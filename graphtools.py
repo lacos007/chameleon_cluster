@@ -103,8 +103,6 @@ def connecting_edges(partitions, graph):
 
 
 def cuda_connecting_edges(partitions, graph):
-    block = (len(partitions[0]), 1, 1)
-    grid = (1, 1)
     
     mod = SourceModule("""
     __global__ void connecting_edges(int** dest, int* first_cluster, int* second_cluster, int* adj_matrix, int second_cluster_length, int matrix_block_size)
@@ -133,36 +131,34 @@ def cuda_connecting_edges(partitions, graph):
     
     return_set = [[]] * (len(partitions[0]) * len(partitions[1]))
     return_set = np.array(return_set).astype(np.int_)
-
+    gpu_return_set = gpuarray.to_gpu(return_set)
     #gpu_return_set = cuda.mem_alloc(return_set.nbytes)
     #cuda.memcpy_htod(gpu_return_set, return_set)
 
     cluster_i = np.array(partitions[0]).astype(np.int_)
-    gpu_return_set = gpuarray.to_gpu(cluster_i)
-    
+    gpu_cluster_i = gpuarray.to_gpu(cluster_i)
     #gpu_cluster_i = cuda.mem_alloc(cluster_i)
     #cuda.memcpy_htod(gpu_cluster_i, cluster_i)
 
-    cluster_j = partitions[1].nodes
-    gpu_cluster_j = cuda.mem_alloc(cluster_j.nbytes)
-    cuda.memcpy_htod(gpu_cluster_j, cluster_j)
+    cluster_j = np.array(partitions[1]).astype(np.int_)
+    gpu_cluster_j = gpuarray.to_gpu(cluster_j)
+    #gpu_cluster_j = cuda.mem_alloc(cluster_j.nbytes)
+    #cuda.memcpy_htod(gpu_cluster_j, cluster_j)
     
     second_cluster_length = len(cluster_j)
     
     adj_graph = nx.to_pandas_adjacency(graph)
 
-    list_graph = []
-
-    for i, j in graph:
-        list_graph.append(adj_graph[i][j])
-
-    gpu_list_graph = cuda.mem_alloc(list_graph.nbytes)
-    cuda.memcpy_htod(gpu_list_graph, list_graph)
+    adj_graph = np.array(adj_graph)
+    list_graph = adj_graph.flatten()
+    gpu_list_graph = gpuarray.to_gpu(list_graph)
+    #gpu_list_graph = cuda.mem_alloc(list_graph.nbytes)
+    #cuda.memcpy_htod(gpu_list_graph, list_graph)
     
     matrix_block_size = len(graph)
     
     connecting_edges(cuda.Out(gpu_return_set), cuda.In(gpu_cluster_i), cuda.In(gpu_cluster_j), cuda.In(gpu_list_graph),
-                        cuda.In(second_cluster_length), cuda.In(matrix_block_size), block, grid)
+        cuda.In(second_cluster_length), cuda.In(matrix_block_size), block=(32, 1, 1), grid=(1, 1))
     
     pair_set = np.empty_like(return_set)
     cuda.memcpy_dtoh(pair_set, gpu_return_set)
