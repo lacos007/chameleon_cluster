@@ -6,6 +6,7 @@ import pycuda.autoinit
 from pycuda.compiler import SourceModule
 import pycuda.driver as cuda
 import pycuda.gpuarray as gpuarray
+from itertools import islice
 
 import metis
 
@@ -98,7 +99,7 @@ def connecting_edges(partitions, graph):
             if a in graph:
                 if b in graph[a]:
                     cut_set.append((a, b))
-    #print (cut_set)
+    #print(cut_set)
     return cut_set
 
 
@@ -120,44 +121,50 @@ def cuda_connecting_edges(partitions, graph):
                         found_pair[0][0] = first_cluster[set_index];
                         found_pair[0][1] = second_cluster[second_index];
                         
-                        dest[return_index] = found_pair[0];
+                        dest[return_index * second_index] = found_pair[0];
                     }
                 else 
-                        dest[return_index] = not_found[0];
-            } 
+                        dest[return_index * second_index] = not_found[0];
+            }
+            printf("%f, %f\\n", dest[0][0], dest[0][1]);
     }  
     """)   
     
     connecting_edges = mod.get_function('connecting_edges')
 
-    return_set = np.zeros((len(partitions[0]) * len(partitions[1])))
+    return_set = np.zeros([len(partitions[0]) * len(partitions[1]), 2])
     return_set = return_set.astype(np.float32)
     gpu_return_set = gpuarray.to_gpu(return_set)
+    #print(gpu_return_set)
 
     cluster_i = np.array(partitions[0])
     cluster_i = cluster_i.astype(np.float32)
     gpu_cluster_i = gpuarray.to_gpu(cluster_i)
+    #print(gpu_cluster_i)
 
     cluster_j = np.array(partitions[1])
     cluster_j = cluster_j.astype(np.float32)
     gpu_cluster_j = gpuarray.to_gpu(cluster_j)
+    #print(gpu_cluster_j)
 
     adj_graph = nx.to_pandas_adjacency(graph)
     adj_graph = np.array(adj_graph)
     list_graph = adj_graph.flatten()
     list_graph = list_graph.astype(np.float32)
     gpu_list_graph = gpuarray.to_gpu(list_graph)
+    #print(gpu_list_graph)
 
-    gpu_second_cluster_length = np.int32(partitions[1])
+    gpu_second_cluster_length = np.int32(len(partitions[1]))
     gpu_matrix_block_size = np.int32(len(graph))
 
     connecting_edges(gpu_return_set, gpu_cluster_i, gpu_cluster_j, gpu_list_graph,
-                     gpu_second_cluster_length, gpu_matrix_block_size, block=(32, 1, 1), grid=(1, 1))
+                     gpu_second_cluster_length, gpu_matrix_block_size, block=(len(cluster_i), 1, 1), grid=(1, 1))
 
     pair_set = gpu_return_set.get()
+    print(pair_set)
 
     pair_set = pair_set[pair_set != (-1, -1)].tolist()
-    
+
     return pair_set
 
 

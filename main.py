@@ -3,6 +3,7 @@ import pycuda.driver as cuda
 
 from visualization import *
 from chameleon import *
+import pycuda.driver as cuda
 
 #making events
 start_clock = cuda.Event()
@@ -25,4 +26,4 @@ if __name__ == "__main__":
     end_clock.record()
     end_clock.synchronize()
     time = start.time_till(end)*1e-3
-    print "%fs" % (secs)
+    print ("%fs") % (secs)
