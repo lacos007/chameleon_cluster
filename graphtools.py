@@ -105,12 +105,13 @@ def connecting_edges(partitions, graph):
 def cuda_connecting_edges(partitions, graph):
     
     mod = SourceModule("""
-    __global__ void connecting_edges(int** dest, int* first_cluster, int* second_cluster, int* adj_matrix, int second_cluster_length, int matrix_block_size)
+    __global__ void connecting_edges(float** dest, float* first_cluster, float* second_cluster, float* adj_matrix, 
+                                        int second_cluster_length, int matrix_block_size)
     {
         int set_index = threadIdx.x;
         int return_index = threadIdx.x;
-        int not_found[1][2] = { {-1, -1} };       
-        int found_pair[1][2];
+        float not_found[1][2] = { {-1.0, -1.0} };       
+        float found_pair[1][2];
         
         for(int second_index = 0; second_index < second_cluster_length; second_index++ )
             {
@@ -130,40 +131,34 @@ def cuda_connecting_edges(partitions, graph):
     connecting_edges = mod.get_function('connecting_edges')
     
     return_set = [[]] * (len(partitions[0]) * len(partitions[1]))
-    return_set = np.array(return_set).astype(np.int_)
+    return_set = np.array(return_set)
+    return_set = return_set.astype(np.float32)
     gpu_return_set = gpuarray.to_gpu(return_set)
-    #gpu_return_set = cuda.mem_alloc(return_set.nbytes)
-    #cuda.memcpy_htod(gpu_return_set, return_set)
 
-    cluster_i = np.array(partitions[0]).astype(np.int_)
+    cluster_i = np.array(partitions[0])
+    cluster_i = cluster_i.astype(np.float32)
     gpu_cluster_i = gpuarray.to_gpu(cluster_i)
-    #gpu_cluster_i = cuda.mem_alloc(cluster_i)
-    #cuda.memcpy_htod(gpu_cluster_i, cluster_i)
 
-    cluster_j = np.array(partitions[1]).astype(np.int_)
+    cluster_j = np.array(partitions[1])
+    cluster_j = cluster_j.astype(np.float32)
     gpu_cluster_j = gpuarray.to_gpu(cluster_j)
-    #gpu_cluster_j = cuda.mem_alloc(cluster_j.nbytes)
-    #cuda.memcpy_htod(gpu_cluster_j, cluster_j)
-    
-    second_cluster_length = len(cluster_j)
-    
+
     adj_graph = nx.to_pandas_adjacency(graph)
 
     adj_graph = np.array(adj_graph)
     list_graph = adj_graph.flatten()
+    cluster_i = cluster_i.astype(np.float32)
     gpu_list_graph = gpuarray.to_gpu(list_graph)
-    #gpu_list_graph = cuda.mem_alloc(list_graph.nbytes)
-    #cuda.memcpy_htod(gpu_list_graph, list_graph)
+
+    gpu_second_cluster_length = np.int32(len(cluster_j))
+    gpu_matrix_block_size = np.int32(len(graph))
+
+    connecting_edges(gpu_return_set, gpu_cluster_i, gpu_cluster_j, gpu_list_graph,
+                     gpu_second_cluster_length, gpu_matrix_block_size, block=(32, 1, 1), grid=(1, 1))
+
+    pair_set = gpu_return_set.get()
     
-    matrix_block_size = len(graph)
-    
-    connecting_edges(cuda.Out(gpu_return_set), cuda.In(gpu_cluster_i), cuda.In(gpu_cluster_j), cuda.In(gpu_list_graph),
-        cuda.In(second_cluster_length), cuda.In(matrix_block_size), block=(32, 1, 1), grid=(1, 1))
-    
-    pair_set = np.empty_like(return_set)
-    cuda.memcpy_dtoh(pair_set, gpu_return_set)
-    
-    pair_set = [pair_set for pair_set in a if pair_set != (-1, -1)]
+    pair_set = [x for x in pair_set if x != (-1, -1)]
     
     return pair_set
 
