@@ -129,9 +129,8 @@ def cuda_connecting_edges(partitions, graph):
     """)   
     
     connecting_edges = mod.get_function('connecting_edges')
-    
-    return_set = [[]] * (len(partitions[0]) * len(partitions[1]))
-    return_set = np.array(return_set)
+
+    return_set = np.zeros((len(partitions[0]) * len(partitions[1])))
     return_set = return_set.astype(np.float32)
     gpu_return_set = gpuarray.to_gpu(return_set)
 
@@ -144,21 +143,20 @@ def cuda_connecting_edges(partitions, graph):
     gpu_cluster_j = gpuarray.to_gpu(cluster_j)
 
     adj_graph = nx.to_pandas_adjacency(graph)
-
     adj_graph = np.array(adj_graph)
     list_graph = adj_graph.flatten()
-    cluster_i = cluster_i.astype(np.float32)
+    list_graph = list_graph.astype(np.float32)
     gpu_list_graph = gpuarray.to_gpu(list_graph)
 
-    gpu_second_cluster_length = np.int32(len(cluster_j))
+    gpu_second_cluster_length = np.int32(partitions[1])
     gpu_matrix_block_size = np.int32(len(graph))
 
     connecting_edges(gpu_return_set, gpu_cluster_i, gpu_cluster_j, gpu_list_graph,
                      gpu_second_cluster_length, gpu_matrix_block_size, block=(32, 1, 1), grid=(1, 1))
 
     pair_set = gpu_return_set.get()
-    
-    pair_set = [x for x in pair_set if x != (-1, -1)]
+
+    pair_set = pair_set[pair_set != (-1, -1)].tolist()
     
     return pair_set
 
