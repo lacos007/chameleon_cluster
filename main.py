@@ -5,13 +5,8 @@ from visualization import *
 from chameleon import *
 import pycuda.driver as cuda
 
-#making events
-start_clock = cuda.Event()
-end_clock = cuda.Event()
 
 if __name__ == "__main__":
-    
-    start_clock.record()
 
     # get a set of data points
     df = pd.read_csv('./datasets/two_squares.csv', sep=' ',
@@ -22,8 +17,4 @@ if __name__ == "__main__":
 
     # draw a 2-D scatter plot with cluster
     plot2d_data(res)
-    
-    end_clock.record()
-    end_clock.synchronize()
-    time = start.time_till(end)*1e-3
-    print ("%fs") % (secs)
+

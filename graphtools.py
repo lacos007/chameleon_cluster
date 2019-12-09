@@ -88,18 +88,21 @@ def get_cluster(graph, clusters):
 
 
 def connecting_edges(partitions, graph):
+    start_clock = cuda.Event()
+    end_clock = cuda.Event()
+    start_clock.record()
     cut_set = []
-    #print (partitions[0])
-    #print (partitions[1])
-    #print('next iteration')
-    #adj_graph = nx.to_pandas_adjacency(graph)
-    #print(adj_graph)
+
     for a in partitions[0]:
         for b in partitions[1]:
             if a in graph:
                 if b in graph[a]:
                     cut_set.append((a, b))
-    #print(cut_set)
+
+    end_clock.record()
+    end_clock.synchronize()
+    time = start_clock.time_till(end_clock) * 1e-3
+    print("%fs", time)
     return cut_set
 
 
@@ -128,8 +131,11 @@ def cuda_connecting_edges(partitions, graph):
             }
             printf("%f, %f\\n", dest[0][0], dest[0][1]);
     }  
-    """)   
-    
+    """)
+    start_clock = cuda.Event()
+    end_clock = cuda.Event()
+    start_clock.record()
+
     connecting_edges = mod.get_function('connecting_edges')
 
     return_set = np.zeros([len(partitions[0]) * len(partitions[1]), 2])
@@ -163,7 +169,12 @@ def cuda_connecting_edges(partitions, graph):
     pair_set = gpu_return_set.get()
     print(pair_set)
 
-    pair_set = pair_set[pair_set != (-1, -1)].tolist()
+    pair_set = pair_set[pair_set != (-1, -1)]
+
+    end_clock.record()
+    end_clock.synchronize()
+    time = start_clock.time_till(end_clock) * 1e-3
+    print("%fs", time)
 
     return pair_set
 
